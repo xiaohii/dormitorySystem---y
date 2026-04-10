@@ -1,102 +1,222 @@
-<meta charset="UTF-8">
 <?php
-include("conn.php");
+require_once __DIR__ . '/conn.php';
+require_once __DIR__ . '/auth.php';
+require_login();
+
+$role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
+$studentOnly = is_student_user();
+$studentId = isset($_SESSION['student_id']) ? $_SESSION['student_id'] : '';
+
+$keyword = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+$classFilter = isset($_GET['class']) ? trim($_GET['class']) : '';
+$dormFilter = isset($_GET['dorm']) ? trim($_GET['dorm']) : '';
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+if ($page < 1) {
+    $page = 1;
+}
+$pageSize = 8;
+
+$conditions = array();
+
+if ($studentOnly && $studentId !== '') {
+    $studentIdSafe = $conn->real_escape_string($studentId);
+    $conditions[] = "`id` = '{$studentIdSafe}'";
+}
+
+if ($keyword !== '') {
+    $keywordSafe = $conn->real_escape_string($keyword);
+    $conditions[] = "(`user` LIKE '%{$keywordSafe}%' OR `id` LIKE '%{$keywordSafe}%')";
+}
+
+if ($classFilter !== '') {
+    $classSafe = $conn->real_escape_string($classFilter);
+    $conditions[] = "`class` = '{$classSafe}'";
+}
+
+if ($dormFilter !== '') {
+    $dormSafe = $conn->real_escape_string($dormFilter);
+    $conditions[] = "`Dno` = '{$dormSafe}'";
+}
+
+$whereSql = '';
+if (!empty($conditions)) {
+    $whereSql = 'WHERE ' . implode(' AND ', $conditions);
+}
+
+$total = 0;
+$countSql = "SELECT COUNT(*) AS total FROM `student` {$whereSql}";
+$countResult = $conn->query($countSql);
+if ($countResult && $row = $countResult->fetch_assoc()) {
+    $total = (int) $row['total'];
+}
+
+$totalPages = (int) ceil($total / $pageSize);
+if ($totalPages < 1) {
+    $totalPages = 1;
+}
+if ($page > $totalPages) {
+    $page = $totalPages;
+}
+$offset = ($page - 1) * $pageSize;
+
+$listSql = "SELECT `user`, `id`, `gender`, `Dno`, `phone`, `class` FROM `student` {$whereSql} ORDER BY `id` LIMIT {$offset}, {$pageSize}";
+$listResult = $conn->query($listSql);
+
+$classOptions = array();
+$dormOptions = array();
+$optionResult = $conn->query('SELECT DISTINCT `class`, `Dno` FROM `student` ORDER BY `class` ASC, `Dno` ASC');
+if ($optionResult) {
+    while ($opt = $optionResult->fetch_assoc()) {
+        if ($opt['class'] !== '' && !in_array($opt['class'], $classOptions, true)) {
+            $classOptions[] = $opt['class'];
+        }
+        if ($opt['Dno'] !== '' && !in_array($opt['Dno'], $dormOptions, true)) {
+            $dormOptions[] = $opt['Dno'];
+        }
+    }
+}
+
+$errorTip = isset($_GET['error']) ? trim($_GET['error']) : '';
+$successTip = flash_get('success');
+
+$baseQuery = array(
+    'keyword' => $keyword,
+    'class' => $classFilter,
+    'dorm' => $dormFilter
+);
 ?>
-
-<html>
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-<title>主页</title>
-    <link href="bootstarp/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .btn-warning{
-            background-color: #d0455a;
-        }
-		 body {
-            background: url("images/66.png")no-repeat;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生信息展示</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-<?php include("header.php");?>
-<div class="container">
-    <br>	
-	     <h2 style="text-align: center">学生信息展示</h2>
-    <br>
-    <table class="table table-bordered table-hover" style="text-align: center">
-        <tr class="info">
-            <th>姓名</th>
-            <th>学号</th>
-            <th>宿舍号</th>
-            <th>性别</th>
-            <th>手机号</th>
-            <th>班级</th>
-            <th>操作</th>
-        </tr>
-        <?php
-        $sql = "select * from `student` order by `id`";
-        $result = mysqli_query($conn,$sql);
-        if (mysqli_num_rows($result)>0) {         // 若表中有数据
-        $number = mysqli_num_rows($result);     // 取得数据笔数
-        if(!isset($_GET['p']))
-        {$p=0;}
-        else {$p=$_GET['p'];}
-        $check = $p + 8;                             // 每页抓取 8 笔数据
-        for ($i = 0; $i < $number; $i++) {// 用来呈现多笔数据的循环
-        $stu = mysqli_fetch_array($result);
+<body class="app-body">
+<?php include __DIR__ . '/header.php'; ?>
 
-        //选取第 $p 笔到 $check 笔数据
-        if ($i >= $p && $i < $check) {
-            echo "<tr>";
-            echo "<td>{$stu['user']}</td>";
-            echo "<td>{$stu['id']}</td>";
-            echo "<td>{$stu['Dno']}</td>";
-            echo "<td>{$stu['gender']}</td>";
-            echo "<td>{$stu['phone']}</td>";
-            echo "<td>{$stu['class']}</td>";
-            echo "<td><a href='delete.php?id={$stu['id']}' class='btn btn-warning'>删除</a>
-                      <a href='update3.php?id={$stu['id']}' class='btn btn-warning'>修改</a></td>";
-            echo "</tr>";
-            $j = $i+1;
-            }
-        }// for循环
-        }
-        ?>
-    </table>
-    <ul class="row pager" style="font-size: 16px;line-height: 30px">
-        <li class="col-xs-2 col-xs-push-3">
-            <!--- 将 p 值设为 0, 让模块从第一笔数据开始 ---->
-            <a href="index.php?p=0">首页</a>
-        </li>
-        <li class="col-xs-2 col-xs-push-2" style="margin-left: 20px">
+<div class="page-wrap">
+    <section class="panel">
+        <h2>学生信息展示</h2>
+        <?php if ($errorTip !== ''): ?>
+            <div class="alert"><?php echo h($errorTip); ?></div>
+        <?php endif; ?>
+        <?php if ($successTip !== ''): ?>
+            <div class="note"><?php echo h($successTip); ?></div>
+        <?php endif; ?>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-title">当前查询结果</div>
+                <div class="stat-value"><?php echo (int) $total; ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">当前页码</div>
+                <div class="stat-value"><?php echo (int) $page; ?> / <?php echo (int) $totalPages; ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">当前身份</div>
+                <div class="stat-value" style="font-size:20px;"><?php echo h(role_label($role)); ?></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <form method="get" action="index.php" class="form-grid">
+            <div class="field">
+                <label for="keyword">姓名 / 学号</label>
+                <input id="keyword" name="keyword" value="<?php echo h($keyword); ?>" placeholder="支持模糊查询">
+            </div>
+            <div class="field">
+                <label for="class">班级筛选</label>
+                <select id="class" name="class">
+                    <option value="">全部班级</option>
+                    <?php foreach ($classOptions as $className): ?>
+                        <option value="<?php echo h($className); ?>" <?php echo $classFilter === $className ? 'selected' : ''; ?>>
+                            <?php echo h($className); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="field">
+                <label for="dorm">宿舍筛选</label>
+                <select id="dorm" name="dorm">
+                    <option value="">全部宿舍</option>
+                    <?php foreach ($dormOptions as $dormNo): ?>
+                        <option value="<?php echo h($dormNo); ?>" <?php echo $dormFilter === $dormNo ? 'selected' : ''; ?>>
+                            <?php echo h($dormNo); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="btn-row" style="align-items:flex-end;">
+                <button class="btn btn-primary" type="submit">查询</button>
+                <a class="btn btn-muted" href="index.php">重置</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>性别</th>
+                <th>宿舍号</th>
+                <th>联系电话</th>
+                <th>班级</th>
+                <?php if (can_manage_records()): ?>
+                    <th>操作</th>
+                <?php endif; ?>
+            </tr>
+            </thead>
+            <tbody>
+            <?php if ($listResult && $listResult->num_rows > 0): ?>
+                <?php while ($stu = $listResult->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo h($stu['id']); ?></td>
+                        <td><?php echo h($stu['user']); ?></td>
+                        <td><?php echo h($stu['gender']); ?></td>
+                        <td><?php echo h($stu['Dno']); ?></td>
+                        <td><?php echo h($stu['phone']); ?></td>
+                        <td><?php echo h($stu['class']); ?></td>
+                        <?php if (can_manage_records()): ?>
+                            <td>
+                                <a href="update3.php?id=<?php echo urlencode($stu['id']); ?>">编辑</a>
+                                |
+                                <a href="delete.php?id=<?php echo urlencode($stu['id']); ?>" onclick="return confirm('确认删除该学生记录吗？');">删除</a>
+                            </td>
+                        <?php endif; ?>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="<?php echo can_manage_records() ? '7' : '6'; ?>">暂无符合条件的学生信息。</td>
+                </tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+
+        <div class="pagination">
             <?php
-            if ($p>7) { // 判断是否有上一页
-                $last = (floor($p/8)*8)-8;
-                echo "<a href='index.php?p=$last'>上一页</a>";
-            }
-            else
-                echo "<a class='disabled'>上一页</a>";
+            $firstQuery = $baseQuery;
+            $firstQuery['page'] = 1;
+            $prevQuery = $baseQuery;
+            $prevQuery['page'] = max(1, $page - 1);
+            $nextQuery = $baseQuery;
+            $nextQuery['page'] = min($totalPages, $page + 1);
+            $lastQuery = $baseQuery;
+            $lastQuery['page'] = $totalPages;
             ?>
-        </li>
-        <li class="col-xs-2 col-xs-push-1" style="margin-left: 20px">
-            <?php
-            if ($i>7 and $number>$check) // 判断是否有下一页
-                echo "<a href='index.php?p=$j'>下一页</a>";
-            else
-                echo "<a class='disabled'>下一页</a>";
-            ?>
-        </li>
-        <li class="col-xs-2" style="margin-left: 30px">
-            <?php
-            if ($i>7) 
-            {
-                $final = floor($number/8)*8;
-                echo "<a href='index.php?p=$final'>末页</a>";
-            }
-            else
-                echo "<a class='disabled'>末页</a>";
-            ?>
-        </li>
-    </ul>
+            <a href="index.php?<?php echo http_build_query($firstQuery); ?>">首页</a>
+            <a href="index.php?<?php echo http_build_query($prevQuery); ?>">上一页</a>
+            <span class="current"><?php echo (int) $page; ?></span>
+            <a href="index.php?<?php echo http_build_query($nextQuery); ?>">下一页</a>
+            <a href="index.php?<?php echo http_build_query($lastQuery); ?>">末页</a>
+        </div>
+    </section>
 </div>
 </body>
 </html>

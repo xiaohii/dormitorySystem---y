@@ -1,15 +1,30 @@
-<meta charset="UTF-8">
 <?php
-include "conn.php";
-$id = $_GET['id'];
-echo $id;
-$sql = "delete from `student` where `id` = '{$id}'";
-$stmt= $conn->query($sql);
-if ($stmt > 0){
-    echo "<script>alert('删除成功')</script>";
-    echo "<script>window.location.href='index.php'</script>";
-}else {
-    echo ("<script>alert('删除失败')</script>");
-    echo ("<script>window.location.href='index.php'</script>");
+require_once __DIR__ . '/conn.php';
+require_once __DIR__ . '/auth.php';
+require_login(array('admin', 'dorm'));
+
+$id = isset($_GET['id']) ? trim($_GET['id']) : '';
+if ($id === '') {
+    flash_set('success', '删除失败：缺少学号参数。');
+    redirect_to('index.php');
 }
-$conn->close();//关闭数据库
+
+$deleteStmt = $conn->prepare('DELETE FROM `student` WHERE `id` = ? LIMIT 1');
+if (!$deleteStmt) {
+    flash_set('success', '删除失败：数据库操作异常。');
+    redirect_to('index.php');
+}
+
+$deleteStmt->bind_param('s', $id);
+$deleteStmt->execute();
+$affected = $deleteStmt->affected_rows;
+$deleteStmt->close();
+
+if ($affected > 0) {
+    flash_set('success', '学生记录已删除。');
+} else {
+    flash_set('success', '未找到对应学号，未删除任何记录。');
+}
+
+redirect_to('index.php');
+?>

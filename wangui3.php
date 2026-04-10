@@ -1,103 +1,195 @@
-<meta charset="UTF-8">
 <?php
-include("conn.php");
+require_once __DIR__ . '/conn.php';
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/system_core.php';
+require_login(array('admin', 'dorm'));
+
+ensure_system_schema($conn);
+
+if (isset($_GET['delete_id'])) {
+    $deleteId = (int) $_GET['delete_id'];
+    if ($deleteId > 0) {
+        $delStmt = $conn->prepare('DELETE FROM `late_return_records` WHERE `record_id` = ? LIMIT 1');
+        if ($delStmt) {
+            $delStmt->bind_param('i', $deleteId);
+            $delStmt->execute();
+            $delStmt->close();
+            write_operation_log($conn, '晚归记录删除', '删除晚归记录 ID：' . $deleteId);
+            flash_set('success', '晚归记录已删除。');
+        }
+    }
+    redirect_to('wangui3.php');
+}
+
+$studentIdFilter = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
+$dateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+$dateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+$notReturnFilter = isset($_GET['is_not_return']) ? trim($_GET['is_not_return']) : '';
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+if ($page < 1) {
+    $page = 1;
+}
+$pageSize = 10;
+
+$conditions = array();
+if ($studentIdFilter !== '') {
+    $sidSafe = $conn->real_escape_string($studentIdFilter);
+    $conditions[] = "`student_id` = '{$sidSafe}'";
+}
+if ($dateFrom !== '') {
+    $fromSafe = $conn->real_escape_string($dateFrom);
+    $conditions[] = "`late_date` >= '{$fromSafe}'";
+}
+if ($dateTo !== '') {
+    $toSafe = $conn->real_escape_string($dateTo);
+    $conditions[] = "`late_date` <= '{$toSafe}'";
+}
+if ($notReturnFilter === '是') {
+    $conditions[] = "(`is_not_return` = '是' OR `is_not_return` = 'Yes')";
+} elseif ($notReturnFilter === '否') {
+    $conditions[] = "(`is_not_return` = '否' OR `is_not_return` = 'No')";
+}
+
+$whereSql = '';
+if (!empty($conditions)) {
+    $whereSql = 'WHERE ' . implode(' AND ', $conditions);
+}
+
+$total = 0;
+$countSql = "SELECT COUNT(*) AS total FROM `late_return_records` {$whereSql}";
+$countResult = $conn->query($countSql);
+if ($countResult && $row = $countResult->fetch_assoc()) {
+    $total = (int) $row['total'];
+}
+
+$totalPages = (int) ceil($total / $pageSize);
+if ($totalPages < 1) {
+    $totalPages = 1;
+}
+if ($page > $totalPages) {
+    $page = $totalPages;
+}
+$offset = ($page - 1) * $pageSize;
+
+$listSql = "SELECT `record_id`, `student_id`, `student_name`, `dorm_no`, `late_date`, `is_not_return`, `remark`, `created_by`, `created_at` FROM `late_return_records` {$whereSql} ORDER BY `record_id` DESC LIMIT {$offset}, {$pageSize}";
+$listResult = $conn->query($listSql);
+
+$successTip = flash_get('success');
+$baseQuery = array(
+    'student_id' => $studentIdFilter,
+    'date_from' => $dateFrom,
+    'date_to' => $dateTo,
+    'is_not_return' => $notReturnFilter
+);
 ?>
-
-<html>
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-<title>主页</title>
-    <link href="bootstarp/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .btn-warning{
-            background-color: #d0455a;
-        }
-		 body {
-            background: url("images/66.png")no-repeat;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晚归记录</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-<?php include("header.php");?>
-<div class="container">
-    <br>	
-	     <h2 style="text-align: center">学生信息展示</h2>
-    <br>
-    <table class="table table-bordered table-hover" style="text-align: center">
-        <tr class="info">
-            <th>姓名</th>
-            <th>学号</th>
-            <th>宿舍号</th>
-            <th>晚归时间</th>
-            <th>未归</th>
-			<th>备注</th>
-			<th>操作</th>
-			
-        </tr>
-        <?php
-        $sql = "select * from `wangui` order by `id`";
-        $result = mysqli_query($conn,$sql);
-        if (mysqli_num_rows($result)>0) {         // 若表中有数据
-        $number = mysqli_num_rows($result);     // 取得数据笔数
-        if(!isset($_GET['p']))
-        {$p=0;}
-        else {$p=$_GET['p'];}
-        $check = $p + 8;                             // 每页抓取 8 笔数据
-        for ($i = 0; $i < $number; $i++) {// 用来呈现多笔数据的循环
-        $stu = mysqli_fetch_array($result);
+<body class="app-body">
+<?php include __DIR__ . '/header.php'; ?>
 
-        //选取第 $p 笔到 $check 笔数据
-        if ($i >= $p && $i < $check) {
-            echo "<tr>";
-            echo "<td>{$stu['user']}</td>";
-            echo "<td>{$stu['id']}</td>";
-            echo "<td>{$stu['Dno']}</td>";
-            echo "<td>{$stu['date']}</td>";
-            echo "<td>{$stu['Nback']}</td>";
-				echo "<td>{$stu['beizu']}</td>";
-            echo "<td><a href='delete1.php?id={$stu['id']}' class='btn btn-warning'>删除</a>
-                      <a href='update5.php?id={$stu['id']}' class='btn btn-warning'>修改</a></td>";
-            echo "</tr>";
-            $j = $i+1;
-            }
-        }// for循环
-        }
-        ?>
-    </table>
-    <ul class="row pager" style="font-size: 16px;line-height: 30px">
-        <li class="col-xs-2 col-xs-push-3">
-            <!--- 将 p 值设为 0, 让模块从第一笔数据开始 ---->
-            <a href="index.php?p=0">首页</a>
-        </li>
-        <li class="col-xs-2 col-xs-push-2" style="margin-left: 20px">
+<div class="page-wrap">
+    <section class="panel">
+        <h2>晚归记录查询</h2>
+        <?php if ($successTip !== ''): ?>
+            <div class="note"><?php echo h($successTip); ?></div>
+        <?php endif; ?>
+
+        <form method="get" action="wangui3.php" class="form-grid">
+            <div class="field">
+                <label for="student_id">学号</label>
+                <input id="student_id" name="student_id" value="<?php echo h($studentIdFilter); ?>" placeholder="精确匹配">
+            </div>
+            <div class="field">
+                <label for="date_from">晚归日期（起）</label>
+                <input id="date_from" type="date" name="date_from" value="<?php echo h($dateFrom); ?>">
+            </div>
+            <div class="field">
+                <label for="date_to">晚归日期（止）</label>
+                <input id="date_to" type="date" name="date_to" value="<?php echo h($dateTo); ?>">
+            </div>
+            <div class="field">
+                <label for="is_not_return">是否未归</label>
+                <select id="is_not_return" name="is_not_return">
+                    <option value="">全部</option>
+                    <option value="是" <?php echo $notReturnFilter === '是' ? 'selected' : ''; ?>>是</option>
+                    <option value="否" <?php echo $notReturnFilter === '否' ? 'selected' : ''; ?>>否</option>
+                </select>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" type="submit">筛选</button>
+                <a class="btn btn-muted" href="wangui3.php">重置</a>
+                <a class="btn btn-muted" href="wangui.php">去登记</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h3>记录列表（共 <?php echo (int) $total; ?> 条）</h3>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>宿舍号</th>
+                <th>晚归日期</th>
+                <th>是否未归</th>
+                <th>备注</th>
+                <th>登记人</th>
+                <th>登记时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php if ($listResult && $listResult->num_rows > 0): ?>
+                <?php while ($row = $listResult->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo (int) $row['record_id']; ?></td>
+                        <td><?php echo h($row['student_id']); ?></td>
+                        <td><?php echo h($row['student_name']); ?></td>
+                        <td><?php echo h($row['dorm_no']); ?></td>
+                        <td><?php echo h($row['late_date']); ?></td>
+                        <td><?php echo h($row['is_not_return']); ?></td>
+                        <td><?php echo h($row['remark']); ?></td>
+                        <td><?php echo h($row['created_by']); ?></td>
+                        <td><?php echo h($row['created_at']); ?></td>
+                        <td>
+                            <a href="wangui3.php?delete_id=<?php echo (int) $row['record_id']; ?>" onclick="return confirm('确认删除该晚归记录吗？');">删除</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="10">暂无晚归记录。</td>
+                </tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+
+        <div class="pagination">
             <?php
-            if ($p>7) { // 判断是否有上一页
-                $last = (floor($p/8)*8)-8;
-                echo "<a href='index.php?p=$last'>上一页</a>";
-            }
-            else
-                echo "<a class='disabled'>上一页</a>";
+            $firstQuery = $baseQuery;
+            $firstQuery['page'] = 1;
+            $prevQuery = $baseQuery;
+            $prevQuery['page'] = max(1, $page - 1);
+            $nextQuery = $baseQuery;
+            $nextQuery['page'] = min($totalPages, $page + 1);
+            $lastQuery = $baseQuery;
+            $lastQuery['page'] = $totalPages;
             ?>
-        </li>
-        <li class="col-xs-2 col-xs-push-1" style="margin-left: 20px">
-            <?php
-            if ($i>7 and $number>$check) // 判断是否有下一页
-                echo "<a href='index.php?p=$j'>下一页</a>";
-            else
-                echo "<a class='disabled'>下一页</a>";
-            ?>
-        </li>
-        <li class="col-xs-2" style="margin-left: 30px">
-            <?php
-            if ($i>7) 
-            {
-                $final = floor($number/8)*8;
-                echo "<a href='index.php?p=$final'>末页</a>";
-            }
-            else
-                echo "<a class='disabled'>末页</a>";
-            ?>
-        </li>
-    </ul>
+            <a href="wangui3.php?<?php echo http_build_query($firstQuery); ?>">首页</a>
+            <a href="wangui3.php?<?php echo http_build_query($prevQuery); ?>">上一页</a>
+            <span class="current"><?php echo (int) $page; ?></span>
+            <a href="wangui3.php?<?php echo http_build_query($nextQuery); ?>">下一页</a>
+            <a href="wangui3.php?<?php echo http_build_query($lastQuery); ?>">末页</a>
+        </div>
+    </section>
 </div>
 </body>
 </html>

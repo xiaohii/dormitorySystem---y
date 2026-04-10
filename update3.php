@@ -1,89 +1,97 @@
-<meta charset="UTF-8">
 <?php
-include("conn.php");
-$sql = "SELECT * FROM student WHERE id =".$_GET['id'];
-$stmt = $conn->query($sql);//返回预处理对象
-$stu = $stmt->fetch_array(MYSQLI_ASSOC);//返回结果集为数组
+require_once __DIR__ . '/conn.php';
+require_once __DIR__ . '/auth.php';
+require_login(array('admin', 'dorm'));
+
+$id = isset($_GET['id']) ? trim($_GET['id']) : '';
+if ($id === '') {
+    flash_set('success', '缺少学号参数。');
+    redirect_to('index.php');
+}
+
+$stmt = $conn->prepare('SELECT `user`, `id`, `Dno`, `gender`, `phone`, `class` FROM `student` WHERE `id` = ? LIMIT 1');
+if (!$stmt) {
+    flash_set('success', '查询失败，请稍后重试。');
+    redirect_to('index.php');
+}
+
+$stmt->bind_param('s', $id);
+$stmt->execute();
+$stmt->store_result();
+$student = null;
+if ($stmt->num_rows === 1) {
+    $stmt->bind_result($dbUser, $dbId, $dbDorm, $dbGender, $dbPhone, $dbClass);
+    $stmt->fetch();
+    $student = array(
+        'user' => $dbUser,
+        'id' => $dbId,
+        'Dno' => $dbDorm,
+        'gender' => $dbGender,
+        'phone' => $dbPhone,
+        'class' => $dbClass
+    );
+}
+$stmt->close();
+
+if (!$student) {
+    flash_set('success', '未找到该学生信息。');
+    redirect_to('index.php');
+}
+
+$tip = flash_get('success');
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>主页</title>
-    <link href="bootstarp/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/css1.css" rel="stylesheet">
-	<style>
-	            body {
-            background: url("images/66.png")no-repeat;
-        }
-	</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑学生信息</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-<?php include("header.php");?>
-<div class="container">
-    <br>
-    <h2 style="text-align: center">学生考勤信息修改</h2>
-    <br>
-    <div>
-        <form action="update2.php" method="post" class="form-horizontal" role="form">
-            <div class="form-group">
-                <label for="user" class="control-label col-xs-2">姓名</label>
-                <div class="col-xs-8">
-                    <input id="user" type="text" name="user" class="form-control" value="<?php echo $stu['user']?>" placeholder="请输入学生的姓名" required>
-                </div>
+<body class="app-body">
+<?php include __DIR__ . '/header.php'; ?>
+
+<div class="page-wrap">
+    <section class="panel">
+        <h2>编辑学生信息</h2>
+        <?php if ($tip !== ''): ?>
+            <div class="note"><?php echo h($tip); ?></div>
+        <?php endif; ?>
+
+        <form action="update2.php" method="post" class="form-grid">
+            <div class="field">
+                <label for="user">姓名</label>
+                <input id="user" name="user" value="<?php echo h($student['user']); ?>" required>
             </div>
-            <br>
-            <div class="form-group">
-                <label for="id" class="control-label col-xs-2">学号</label>
-                <div class="col-xs-8">
-                    <input id="id" type="text" name="id" class="form-control" value="<?php echo $stu['id']?>" placeholder="请输入学生的学号" required>
-                </div>
+            <div class="field">
+                <label for="id">学号</label>
+                <input id="id" name="id" value="<?php echo h($student['id']); ?>" readonly>
             </div>
-            <br>
-            <div class="form-group">
-                <label for="Dno" class="control-label col-xs-2">宿舍号</label>
-                <div class="col-xs-8">
-                    <input id="Dno" type="text" name="Dno" class="form-control" value="<?php echo $stu['Dno']?>" placeholder="请输入学生的宿舍号" required>
-                </div>
+            <div class="field">
+                <label for="Dno">宿舍号</label>
+                <input id="Dno" name="Dno" value="<?php echo h($student['Dno']); ?>" required>
             </div>
-            <br>
-            <div class="form-group">
-                <label class="control-label col-xs-2">性别</label>
-                <div class="col-xs-8">
-                    <label class="radio-inline"><input type="radio" value="男" name="gender" required>男</label>
-                    <label class="radio-inline"><input type="radio" value="女" name="gender" required>女</label>
-                </div>
+            <div class="field">
+                <label for="gender">性别</label>
+                <select id="gender" name="gender" required>
+                    <option value="男" <?php echo $student['gender'] === '男' ? 'selected' : ''; ?>>男</option>
+                    <option value="女" <?php echo $student['gender'] === '女' ? 'selected' : ''; ?>>女</option>
+                </select>
             </div>
-            <br>
-            <div class="form-group">
-                <label for="phone" class="control-label col-xs-2">手机号</label>
-                <div class="col-xs-8">
-                    <input id="phone" type="text" name="phone" class="form-control" value="<?php echo $stu['phone']?>" placeholder="请输入学生的手机号" required>
-                </div>
+            <div class="field">
+                <label for="phone">联系电话</label>
+                <input id="phone" name="phone" value="<?php echo h($student['phone']); ?>" required>
             </div>
-            <br>
-            <div class="form-group">
-                <label for="class" class="control-label col-xs-2">班级</label>
-                <div class="col-xs-8">
-                    <input id="class" type="text" name="class" class="form-control" value="<?php echo $stu['class']?>" placeholder="请输入学生的班级" required>
-                </div>
+            <div class="field">
+                <label for="class">班级</label>
+                <input id="class" name="class" value="<?php echo h($student['class']); ?>" required>
             </div>
-            <br>
-            <div class="form-group">
-                <div class="col-xs-2 col-xs-offset-4">
-                    <input style="padding: 10px 50px" class="btn btn-success" type="submit" value="提交">
-                </div>
-                <div class="col-xs-2">
-                    <input type="reset" style="padding: 10px 50px" class="btn btn-primary" value="重置">
-                </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" type="submit">保存修改</button>
+                <a class="btn btn-muted" href="index.php">返回列表</a>
             </div>
         </form>
-    </div>
+    </section>
 </div>
 </body>
 </html>
-
-
-
-
-

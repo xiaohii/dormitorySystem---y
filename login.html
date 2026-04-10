@@ -1,101 +1,102 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <style type="text/css">
-        * {
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            background: url("images/66.png") no-repeat;
-        }
-        .Login {
-            width: 600px;
-            height: 350px;
-            background: rgb(232, 236, 223);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            margin: auto;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.4);
-        }
-        label {
-            display: block;
-            margin-left: 10px;
-        }
-        form {
-            margin: 25px 140px;
-        }
-        h2 {
-            margin-top: 35px;
-            text-align: center;
-            font-size: 25px;
-            color: #000000;
-        }
-        input {
-            width: 220px;
-            height: 30px;
-            background: transparent;
-            margin-top: 30px;
-            border: none;
-            border-bottom: 1px #a77a27 solid;
-            outline: none;
-            color: #000000;
-            font-size: 17px;
-            margin-left: 10px;
-        }
-        input::-webkit-input-placeholder {
-            color: #c3cdd0;
-        }
-        button {
-            width: 98px;
-            height: 30px;
-            border: none;
-            margin-top: 55px;
-            margin-left: 40px;
-            color: white;
-            text-align: center;line-height: 15px;
-            background-image: linear-gradient(to right, #7993d4, #ca71fa);
-            border-radius: 15px;
-            cursor: pointer;
-        }
-        button:hover {
-            box-shadow: 0 0 5px rgba(0,0,0,0.4) inset;
-        }
-        img{
-            width: 27px;
-            height: 27px;
-            position: relative;
-            top: 9px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宿舍管理系统 - 登录</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-<div class="Login">
-    <h2>学生考勤管理系统</h2>
-    <form action="login.php" method="post">
-        <label>
-            <img src="images/user.png">
-            <input type="text" name="user" placeholder="请输入用户名" required>
-        </label>
-        <label>
-            <img src="images/password.png">
-            <input type="password" name="pwd" placeholder="请输入密码" required>
-        </label>
-        <button type="submit" value="登录">登录</button>
-        <button type="button" id="btn" value="注册">注册</button>
-    </form>
+<body class="login-body">
+<div class="login-card">
+    <section class="login-intro">
+        <h1>宿舍管理系统</h1>
+        <p>支持管理员、任课教师、宿管人员、学生四种角色登录。</p>
+        <p>包含学生信息展示、查询、课堂签到、扫码签到、晚归登记等功能。</p>
+        <p>系统使用 Session 管理登录状态和访问权限。</p>
+    </section>
+
+    <section class="login-form">
+        <h2>账号登录</h2>
+        <div id="errorBox" class="alert" style="display:none;"></div>
+        <form id="loginForm" action="login.php" method="post" autocomplete="on">
+            <div class="field">
+                <label for="user">用户名</label>
+                <input id="user" type="text" name="user" placeholder="用户名或学号" required>
+            </div>
+
+            <div class="field">
+                <label for="pwd">密码</label>
+                <input id="pwd" type="password" name="pwd" placeholder="请输入密码" required>
+            </div>
+
+            <div class="field">
+                <label for="role">角色</label>
+                <select id="role" name="role" required>
+                    <option value="admin">管理员</option>
+                    <option value="teacher">任课教师</option>
+                    <option value="dorm">宿管人员</option>
+                    <option value="student">学生</option>
+                </select>
+            </div>
+
+            <label class="checkbox-row" for="remember">
+                <input id="remember" type="checkbox" name="remember" value="1" style="width:auto;">
+                记住密码（保存在本机）
+            </label>
+
+            <div class="login-actions">
+                <button class="btn btn-primary" type="submit">登录</button>
+                <a class="btn btn-muted" href="register.html" style="text-align:center;line-height:20px;">注册管理员</a>
+            </div>
+        </form>
+
+        <div class="small-muted">
+            学生登录：用户名填学号，密码填学号或手机号。
+        </div>
+    </section>
 </div>
+
 <script>
-   var b = document.getElementById("btn");
-   b.onclick = function () {
-       window.location.href="register.html"
-   }
+(function () {
+    var form = document.getElementById('loginForm');
+    var user = document.getElementById('user');
+    var pwd = document.getElementById('pwd');
+    var role = document.getElementById('role');
+    var remember = document.getElementById('remember');
+    var errorBox = document.getElementById('errorBox');
+    var storageKey = 'dormitory_login_cache';
+
+    var params = new URLSearchParams(window.location.search);
+    var error = params.get('error');
+    if (error) {
+        errorBox.textContent = error;
+        errorBox.style.display = 'block';
+    }
+
+    try {
+        var cacheRaw = localStorage.getItem(storageKey);
+        if (cacheRaw) {
+            var cache = JSON.parse(cacheRaw);
+            if (cache.user) user.value = cache.user;
+            if (cache.pwd) pwd.value = cache.pwd;
+            if (cache.role) role.value = cache.role;
+            remember.checked = true;
+        }
+    } catch (e) {}
+
+    form.addEventListener('submit', function () {
+        if (remember.checked) {
+            var payload = {
+                user: user.value.trim(),
+                pwd: pwd.value,
+                role: role.value
+            };
+            localStorage.setItem(storageKey, JSON.stringify(payload));
+        } else {
+            localStorage.removeItem(storageKey);
+        }
+    });
+})();
 </script>
 </body>
 </html>

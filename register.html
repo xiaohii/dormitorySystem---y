@@ -1,112 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <style type="text/css">
-        * {
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            background: url(images/66.png) no-repeat;
-        }
-        .Login {
-            width: 600px;
-            height: 400px;
-            background: rgb(232, 236, 223);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            margin: auto;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.4);
-        }
-        label {
-            display: block;
-            margin-left: 10px;
-        }
-        form {
-            margin: 25px 140px;
-        }
-        h2 {
-            margin-top: 35px;
-            text-align: center;
-            font-size: 25px;
-            color: #000000;
-        }
-        input {
-            width: 220px;
-            height: 30px;
-            background: transparent;
-            margin-top: 30px;
-            border: none;
-            border-bottom: 1px #a77a27 solid;
-            outline: none;
-            color: #000000;
-            font-size: 17px;
-            margin-left: 10px;
-        }
-        input::-webkit-input-placeholder {
-            color: #c3cdd0;
-        }
-        button {
-            width: 98px;
-            height: 30px;
-            border: none;
-            margin-top: 50px;
-            margin-left: 40px;
-            color: white;
-            text-align: center;
-            line-height: 15px;
-            background-image: linear-gradient(to right, #7993d4, #ca71fa);
-            border-radius: 15px;
-            cursor: pointer;
-        }
-        button:hover {
-            box-shadow: 0 0 5px rgba(0,0,0,0.4) inset;
-        }
-        span {
-            font-size: 15px;
-        }
-        #btn > a{
-            text-decoration: none;
-        }
-        img{
-            width: 27px;
-            height: 27px;
-            position: relative;
-            top: 9px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员注册</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-<div class="Login"> 
-    <h2>管理员注册</h2>
-    <form action="register.php" method="post">
-        <label>
-            <img src="images/user.png">
-            <input type="text" class="put" name="user" placeholder="请输入用户名" required>
-        </label>
-        <label>
-            <img src="images/password.png">
-            <input type="password" class="put" name="pwd1" placeholder="请输入密码" required>
-        </label>
-        <label>
-            <img src="images/password.png">
-            <input type="password" class="put" name="pwd2" placeholder="确认密码" required>
-        </label>
-        <button type="submit" value="提交">提交</button>
-        <button type="button" id="btn" value="返回">返回</button>
-    </form>
+<body class="login-body">
+<div class="login-card" style="max-width:860px;">
+    <section class="login-intro">
+        <h1>创建管理员账号</h1>
+        <p>该页面用于创建系统管理员账号。</p>
+        <p>注册完成后可使用管理员或宿管角色登录。</p>
+        <p>建议注册后返回登录页验证账号。</p>
+    </section>
+
+    <section class="login-form">
+        <h2>提交注册</h2>
+        <div id="errorBox" class="alert" style="display:none;"></div>
+        <form action="register.php" method="post">
+            <div class="field">
+                <label for="user">用户名</label>
+                <input id="user" name="user" required>
+            </div>
+            <div class="field">
+                <label for="pwd1">密码</label>
+                <input id="pwd1" name="pwd1" type="password" required>
+            </div>
+            <div class="field">
+                <label for="pwd2">确认密码</label>
+                <input id="pwd2" name="pwd2" type="password" required>
+            </div>
+            <div class="login-actions">
+                <button class="btn btn-primary" type="submit">提交注册</button>
+                <a class="btn btn-muted" href="login.html" style="text-align:center;line-height:20px;">返回登录</a>
+            </div>
+        </form>
+    </section>
 </div>
+
 <script>
-    var b = document.getElementById("btn");
-    b.onclick = function () {
-        window.location.href="login.html"
-    }
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var error = params.get('error');
+    if (!error) return;
+
+    var box = document.getElementById('errorBox');
+    box.style.display = 'block';
+    box.textContent = error;
+})();
 </script>
 </body>
 </html>

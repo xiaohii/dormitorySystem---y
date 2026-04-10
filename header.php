@@ -1,47 +1,57 @@
-<meta charset="UTF-8">
 <?php
-include("conn.php");
-session_start();
-?>
+require_once __DIR__ . '/auth.php';
+require_login();
 
-<html>
-<head>
-    <title>主页</title>
-    <link href="css/css1.css" rel="stylesheet">
-    <link href="bootstarp/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        button {
-            top: 7px;
-            right: 15px;
-        }
-        th{
-            text-align: center;
-        }
-        .container{
-            width: 1200px;
-        }
-        .row{
-            line-height: 50px;
-        }
-        .btn-warning{
-            background-color: #d0455a;
-        }
-		
-    </style>
-</head>
-<body>
-    <!-- 定义一个盒子来装整个系统的页面以及选项 session数组进行读取。注册页面中的session-->
-<div class="container">
-    <div class="row" style="background-color: #2e7ad5;color: white">
-        <div style="font-size: 20px" class="col-xs-4">学生考勤管理系统</div>
-        <a href="index.php"><span class="col-xs-1">学生信息</span></a>
-        <a href="select.php"><span class="col-xs-1">查询学生</span></a>
-        <a href="add.php"><span class="col-xs-1">新生入住</span></a>
-        <a href="wangui.php"><span class="col-xs-1">晚归登记</span></a>
-		<a href="wangui3.php"><span class="col-xs-1">晚归登记表</span></a>
-        <span class="col-xs-1" style="width: 120px;"  >管理员：<?php echo $_SESSION['user']?></span>
-        <a href="login.html"><span class="col-xs-1">退出</span></a> 
+$currentPage = basename($_SERVER['PHP_SELF']);
+$role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
+
+$menu = array(
+    array('href' => 'index.php', 'label' => '学生信息'),
+    array('href' => 'select.php', 'label' => '学生查询')
+);
+
+if (!is_teacher_user()) {
+    $menu[] = array('href' => 'signin.php', 'label' => '扫码签到');
+}
+
+if (can_manage_class_attendance()) {
+    $menu[] = array('href' => 'class_attendance.php', 'label' => '课堂签到');
+    $menu[] = array('href' => 'leave_review.php', 'label' => '请假审批');
+}
+
+if (can_manage_records()) {
+    $menu[] = array('href' => 'attendance.php', 'label' => '考勤管理');
+    $menu[] = array('href' => 'add.php', 'label' => '新生入住');
+    $menu[] = array('href' => 'wangui.php', 'label' => '晚归登记');
+    $menu[] = array('href' => 'wangui3.php', 'label' => '晚归记录');
+    $menu[] = array('href' => 'alerts.php', 'label' => '异常预警');
+}
+
+if (can_manage_records() || can_manage_class_attendance()) {
+    $menu[] = array('href' => 'stats.php', 'label' => '数据统计');
+}
+
+if (is_student_user()) {
+    $menu[] = array('href' => 'class_signin.php', 'label' => '课堂签到');
+    $menu[] = array('href' => 'leave_apply.php', 'label' => '请假申请');
+}
+
+if (is_admin_user()) {
+    $menu[] = array('href' => 'system.php', 'label' => '系统管理');
+}
+?>
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="topbar-brand">宿舍管理系统</div>
+        <nav class="topbar-nav">
+            <?php foreach ($menu as $item): ?>
+                <?php $active = $currentPage === $item['href'] ? 'active' : ''; ?>
+                <a class="<?php echo $active; ?>" href="<?php echo $item['href']; ?>"><?php echo h($item['label']); ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <div class="topbar-user">
+            <div><?php echo h(role_label($role)); ?>：<?php echo h(current_user_name()); ?></div>
+            <a href="logout.php">退出登录</a>
+        </div>
     </div>
 </div>
-</body>
-</html>

@@ -1,84 +1,61 @@
+<?php
+require_once __DIR__ . '/auth.php';
+require_login(array('admin', 'dorm'));
+$tip = flash_get('success');
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>主页</title>
-    <link href="bootstarp/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/css1.css" rel="stylesheet">
-	<style>
-	      body {
-            background: url("images/66.png")no-repeat;
-        }
-	</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新生入住登记</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-<?php include("header.php");?>
-<div class="container">
-    <br>
-    <h2 style="text-align: center">新生入住登记</h2>
-    <br>
-<div>
-    <form action="add2.php" method="post" class="form-horizontal" role="form">
-        <div class="form-group">
-            <label for="name" class="control-label col-xs-2">姓名</label>
-            <div class="col-xs-8">
-                <input id="name" type="text" name="user" class="form-control" placeholder="请输入学生的姓名" required>
-            </div>
-        </div>
-        <br>
-        <div class="form-group">
-            <label for="id" class="control-label col-xs-2">学号</label>
-            <div class="col-xs-8">
-                <input id="id" type="text" name="id" class="form-control" placeholder="请输入学生的学号" required>
-            </div>
-        </div>
-        <br>
-        <div class="form-group">
-            <label class="control-label col-xs-2">性别</label>
-            <div class="col-xs-8">
-                <label class="radio-inline"><input type="radio" value="男" name="gender" required>男</label>
-                <label class="radio-inline"><input type="radio" value="女" name="gender" required>女</label>
-            </div>
-        </div>
-        <br>
-        <div class="form-group">
-            <label for="phone" class="control-label col-xs-2">手机号</label>
-            <div class="col-xs-8">
-                <input id="phone" type="text" name="phone" class="form-control" placeholder="请输入学生的手机号" required>
-            </div>
-        </div>
-        <br>
-        <div class="form-group">
-            <label for="class" class="control-label col-xs-2">班级</label>
-            <div class="col-xs-8">
-                <input id="class" type="text" name="class" class="form-control" placeholder="请输入学生的班级" required>
-            </div>
-        </div>
-        <br>
-        <br>
-        <div class="form-group">
-            <label for="Dno" class="control-label col-xs-2">宿舍号</label>
-            <div class="col-xs-8">
-                <input id="Dno" type="text" name="Dno" class="form-control" placeholder="请输入学生的宿舍号" required>
-            </div>
-        </div>
-        <br>
-        <div class="form-group">
-            <div class="col-xs-2 col-xs-offset-4">
-                <input style="padding: 10px 50px" class="btn btn-success" type="submit" value="提交">
-            </div>
-            <div class="col-xs-2">
-                <input type="reset" style="padding: 10px 50px" class="btn btn-primary" value="重置">
-            </div>
-        </div>
+<body class="app-body">
+<?php include __DIR__ . '/header.php'; ?>
 
-    </form>
-</div>
+<div class="page-wrap">
+    <section class="panel">
+        <h2>新生入住登记</h2>
+        <?php if ($tip !== ''): ?>
+            <div class="note"><?php echo h($tip); ?></div>
+        <?php endif; ?>
+
+        <form action="add2.php" method="post" class="form-grid">
+            <div class="field">
+                <label for="user">姓名</label>
+                <input id="user" name="user" required>
+            </div>
+            <div class="field">
+                <label for="id">学号</label>
+                <input id="id" name="id" required>
+            </div>
+            <div class="field">
+                <label for="gender">性别</label>
+                <select id="gender" name="gender" required>
+                    <option value="">请选择</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="phone">联系电话</label>
+                <input id="phone" name="phone" required>
+            </div>
+            <div class="field">
+                <label for="class">班级</label>
+                <input id="class" name="class" required>
+            </div>
+            <div class="field">
+                <label for="Dno">宿舍号</label>
+                <input id="Dno" name="Dno" required>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" type="submit">提交</button>
+                <button class="btn btn-muted" type="reset">重置</button>
+            </div>
+        </form>
+    </section>
 </div>
 </body>
 </html>
-
-
-
-
-
